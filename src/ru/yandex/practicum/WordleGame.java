@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+@SuppressWarnings("checkstyle:Regexp")
 public class WordleGame {
     private final String secretWord;
     private final int wordLength;
@@ -74,14 +75,14 @@ public class WordleGame {
         }
 
         currentAttempt++;
-        String symbolsPrompt = WordleDictionary.buildPrompt(guess, secretWord);
+        String symbolsPrompt = buildPrompt(guess, secretWord);
         if (guess.equals(secretWord)) {
             isWin = true;
             return symbolsPrompt;
         }
 
         usedWords.add(guess);
-        possibleWords = dictionary.filterCandidates(possibleWords, guess, symbolsPrompt);
+        possibleWords = filterCandidates(guess, symbolsPrompt);
         possibleWords.removeAll(usedWords);
 
         log.println(String.format("Результат: %s. Осталось попыток: %d", symbolsPrompt, getRemainingAttempts()));
@@ -122,5 +123,62 @@ public class WordleGame {
 
     public String getSecretWord() {
         return secretWord;
+    }
+
+    public static String buildPrompt(String guess, String secret) throws InvalidWordLengthException {
+        if (guess == null || secret == null) {
+            throw new IllegalArgumentException("Слова для создания символьной подсказки не переданы");
+        }
+        if (guess.length() != secret.length()) {
+            throw new InvalidWordLengthException(secret.length(), guess.length());
+        }
+
+        int length = guess.length();
+        char[] result = new char[length];
+        boolean[] secretUsed = new boolean[length];
+
+        for (int i = 0; i < length; i++) {
+            if (guess.charAt(i) == secret.charAt(i)) {
+                result[i] = '+';
+                secretUsed[i] = true;
+            }
+        }
+
+        for (int i = 0; i < length; i++) {
+            if (result[i] == '+') {
+                continue;
+            }
+
+            char currentChar = guess.charAt(i);
+            boolean found = false;
+
+            for (int j = 0; j < length; j++) {
+                if (!secretUsed[j] && secret.charAt(j) == currentChar) {
+                    secretUsed[j] = true;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                result[i] = '^';
+            } else {
+                result[i] = '-';
+            }
+        }
+
+        return new String(result);
+    }
+
+    public List<String> filterCandidates(String guess, String expectedSymbolsPrompt)
+            throws InvalidWordLengthException {
+        List<String> filtered = new ArrayList<>();
+        for (String candidate : possibleWords) {
+            String currSymbolsPrompt = buildPrompt(guess, candidate);
+            if (currSymbolsPrompt.equals(expectedSymbolsPrompt)) {
+                filtered.add(candidate);
+            }
+        }
+        log.println(String.format("Фильтрация по слову '%s' — осталось кандидатов: %d.", guess, filtered.size()));
+        return filtered;
     }
 }

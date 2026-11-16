@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -158,5 +159,54 @@ class WordleGameTest {
         } catch (EmptyDictionaryException expected) {
             //все ок
         }
+    }
+
+    @Test
+    void shouldBuildPrompt() throws InvalidWordLengthException {
+        //Проверяем маску при полном совпадении всех букв на своих местах
+        assertEquals("+++++", WordleGame.buildPrompt("арбуз", "арбуз"));
+
+        //Проверяем маску при полном отсутствии общих букв
+        assertEquals("-----", WordleGame.buildPrompt("лимон", "арбуз"));
+
+        //Проверяем смешанную маску
+        assertEquals("-+^-^", WordleGame.buildPrompt("груша", "арбуз"));
+    }
+
+    @Test
+    void shouldBuildPromptWithDuplicates() throws InvalidWordLengthException {
+        //Проверяем обработку дублей: в "какао" одна буква "о", поэтому в "кокос" должна посдвечиваться только первая
+        assertEquals("+^+--", WordleGame.buildPrompt("кокос", "какао"));
+
+        //Проверяем обработку дублей: в "арбуз" одна буква "а", поэтому в "банан" должна подсвечивается только первая
+        assertEquals("^^---", WordleGame.buildPrompt("банан", "арбуз"));
+    }
+
+    @Test
+    void shouldThrowOnDifferentWordLengths() {
+        try {
+            //Проверяем вызов исключения при сравнении слов разной длины (3 и 5)
+            WordleGame.buildPrompt("дом", "арбуз");
+            fail("Ожидалось исключение InvalidWordLengthException при разной длине слов");
+        } catch (InvalidWordLengthException expected) {
+            //все ок
+        }
+    }
+
+    @Test
+    void shouldFilterCandidates() throws InvalidWordLengthException, EmptyDictionaryException {
+        WordleDictionary customDictionary = new WordleDictionary(List.of("арбуз", "лимон", "груша", "тыква", "мешок"), log);
+        WordleGame game = new WordleGame(customDictionary, 5, 6, log);
+
+        String guess = "тыква";
+        String expectedPrompt = WordleGame.buildPrompt(guess, "арбуз");
+
+        List<String> candidates = game.filterCandidates(guess, expectedPrompt);
+
+        //Проверяем, что после фильтра по маске остался ровно 1 кандидат
+        assertEquals(1, candidates.size());
+
+        //Проверяем, что этот единственный кандидат является загаданным словом "арбуз"
+        assertEquals("арбуз", candidates.get(0));
     }
 }
